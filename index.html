@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arcade Live Score</title>
+  <style>
+    :root {
+      --bg: #0b0b12;
+      --fg: #f2f2f2;
+      --sub: #8a8aa0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, sans-serif;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    h1 { font-size: 1.2rem; letter-spacing: .1em; margin: 0; }
+    h2 { font-size: 1rem; color: var(--sub); margin: 24px 0 8px; }
+    #status { font-size: .75rem; color: var(--sub); }
+    #status.live { color: #4ade80; }
+
+    #latest {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    .card {
+      border: 2px solid var(--c);
+      border-radius: 12px;
+      padding: 14px;
+      background: #ffffff08;
+      box-shadow: 0 0 var(--glow) var(--c);
+    }
+    .card .name { font-weight: 700; font-size: 1.1rem; word-break: break-all; }
+    .card .score {
+      font-size: 2rem;
+      color: var(--c);
+      font-variant-numeric: tabular-nums;
+    }
+    .card .rank { font-size: .8rem; color: var(--sub); }
+    .card.enter {
+      animation: enter .7s cubic-bezier(.2, 1.4, .4, 1) both;
+      animation-delay: var(--d);
+    }
+    @keyframes enter {
+      from { opacity: 0; transform: translateY(30px) scale(.8); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    #history { list-style: none; padding: 0; margin: 0; }
+    #history li {
+      display: grid;
+      grid-template-columns: 3em 1fr auto;
+      gap: 8px;
+      padding: 6px 10px;
+      border-left: 4px solid var(--c);
+      border-bottom: 1px solid #ffffff14;
+      font-variant-numeric: tabular-nums;
+    }
+    #history li.me { background: #ffffff1a; font-weight: 700; }
+    #history li.me.flash { animation: flash 1.2s ease-out 3; }
+    @keyframes flash {
+      0%   { background: var(--c); color: #000; }
+      100% { background: #ffffff1a; }
+    }
+    .empty { color: var(--sub); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ARCADE LIVE</h1>
+    <span id="status">接続中…</span>
+  </header>
+
+  <h2>LATEST GAME</h2>
+  <div id="latest"><p class="empty">まだデータがありません</p></div>
+
+  <h2>ALL-TIME RANKING</h2>
+  <ol id="history"></ol>
+
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+    const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";
+    const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const $latest = document.getElementById("latest");
+    const $history = document.getElementById("history");
+    const $status = document.getElementById("status");
+    let lastId = null;
+
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+    const safeColor = (c) => /^[0-9A-Fa-f]{6}$/.test(c) ? `#${c}` : "#ffffff";
+    const glow = (i) => `${Math.min(40, Math.max(0, Number(i) || 0) * 10)}px`;
+
+    function countUp(el, target, duration = 1200) {
+      const start = performance.now();
+      const step = (now) => {
+        const t = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = Math.round(target * eased).toLocaleString();
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }
+
+    function render(snapshot, animate) {
+      const latest = snapshot?.latest ?? [];
+      const history = snapshot?.history ?? [];
+
+      $latest.innerHTML = latest.length === 0
+        ? `<p class="empty">まだデータがありません</p>`
+        : latest.map((p, i) => `
+          <div class="card ${animate ? "enter" : ""}"
+               style="--c:${safeColor(p.color)};--glow:${glow(p.intensity)};--d:${i * 0.15}s">
+            <div class="name">${esc(p.name)}</div>
+            <div class="score" data-score="${Number(p.score) || 0}">
+              ${animate ? "0" : (Number(p.score) || 0).toLocaleString()}
+            </div>
+            <div class="rank">${p.rank > 0 ? `歴代 ${p.rank} 位` : "ランク外"}</div>
+          </div>`).join("");
+
+      $history.innerHTML = history.map((p) => `
+        <li class="${p.isLatest ? "me" : ""} ${p.isLatest && animate ? "flash" : ""}"
+            style="--c:${safeColor(p.color)}">
+          <span>${p.rank}</span>
+          <span>${esc(p.name)}</span>
+          <span>${(Number(p.score) || 0).toLocaleString()}</span>
+        </li>`).join("");
+
+      if (animate) {
+        $latest.querySelectorAll(".score").forEach((el, i) => {
+          setTimeout(() => countUp(el, Number(el.dataset.score)), i * 150 + 300);
+        });
+      }
+    }
+
+    async function fetchLatest() {
+      const { data, error } = await supabase
+        .from("snapshots")
+        .select("id, payload")
+        .order("id", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+      if (data && data.id !== lastId) {
+        const isUpdate = lastId !== null;
+        lastId = data.id;
+        render(data.payload, isUpdate);
+      }
+    }
+
+    supabase
+      .channel("snapshots-live")
+      .on("postgres_changes",
+        { event: "INSERT", schema: "public", table: "snapshots" },
+        (payload) => {
+          lastId = payload.new.id;
+          render(payload.new.payload, true);
+        })
+      .subscribe((status) => {
+        const live = status === "SUBSCRIBED";
+        $status.textContent = live ? "● LIVE" : "接続中…";
+        $status.classList.toggle("live", live);
+        if (live) fetchLatest(); // 再接続時に、切断中の更新を取り直す
+      });
+
+    // スマホがスリープから復帰したときにも取り直す
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) fetchLatest();
+    });
+
+    fetchLatest();
+  </script>
+</body>
+</html>
