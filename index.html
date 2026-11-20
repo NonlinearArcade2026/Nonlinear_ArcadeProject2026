@@ -1,5 +1,5 @@
-<!-- File: index.html --> 
-
+<!-- Output: html -->
+<!-- File: index.html -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -9,18 +9,20 @@
   <title>RABBIT SHOOTING LIVE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- 共通フォント（日本語の名前や記号の表示用に常に読み込む） -->
+  <!-- 共通フォント（日本語のプレイヤー名を表示するため常に読み込む） -->
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&display=swap" rel="stylesheet">
   <style>
     :root {
       --ink: #3b2a4a;
       --pink: #ff8fb8;
+      --hot: #ff4f8b;
       --yellow: #ffe066;
       --mint: #7ee0c3;
       --sky: #8ecbff;
       --cream: #fff6e9;
-      /* 言語ごとのフォントは JS で上書きする */
+      /* JS で CONFIG の値に書き換える */
       --font-main: "M PLUS Rounded 1c";
+      --font-title: "M PLUS Rounded 1c";
     }
     * { box-sizing: border-box; }
     html { -webkit-text-size-adjust: 100%; }
@@ -29,7 +31,7 @@
       padding:
         calc(12px + env(safe-area-inset-top))
         calc(16px + env(safe-area-inset-right))
-        calc(48px + env(safe-area-inset-bottom))
+        calc(130px + env(safe-area-inset-bottom))
         calc(16px + env(safe-area-inset-left));
       min-height: 100dvh;
       color: var(--ink);
@@ -41,6 +43,16 @@
       background-size: 48px 48px;
       background-position: 0 0, 24px 24px;
       overflow-x: hidden;
+    }
+
+    /* 背景画像（CONFIG.images.background を指定したときだけ表示） */
+    .bg-layer {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background-size: cover;
+      background-position: center;
+      pointer-events: none;
     }
 
     /* ===== 言語切り替え ===== */
@@ -66,10 +78,7 @@
     }
 
     /* ===== ヘッダー ===== */
-    header {
-      text-align: center;
-      margin: 48px 0 8px;
-    }
+    header { text-align: center; margin: 48px 0 8px; }
     .logo-wrap {
       display: inline-flex;
       align-items: center;
@@ -78,23 +87,21 @@
       gap: 10px;
       max-width: 100%;
     }
-    #logo {
-      max-height: 80px;
-      max-width: 70vw;
-    }
-    .mascot {
+    .logo-img { max-height: 90px; max-width: 72vw; }
+    .mascot-img {
       width: 64px;
       height: 64px;
       object-fit: contain;
       animation: hop 1.6s ease-in-out infinite;
     }
-    .mascot-fallback {
+    .emoji {
       font-size: 48px;
+      display: inline-block;
       animation: hop 1.6s ease-in-out infinite;
     }
     h1 {
       margin: 0;
-      font-family: "M PLUS Rounded 1c", var(--font-main), sans-serif;
+      font-family: var(--font-title), "M PLUS Rounded 1c", sans-serif;
       font-size: clamp(1.7rem, 8vw, 3.2rem);
       font-weight: 800;
       letter-spacing: .04em;
@@ -107,6 +114,7 @@
     }
     #status {
       display: inline-block;
+      max-width: 92vw;
       margin-top: 10px;
       padding: 4px 14px;
       border: 3px solid var(--ink);
@@ -114,11 +122,10 @@
       background: #fff;
       font-weight: 800;
       font-size: .85rem;
+      overflow-wrap: anywhere;
     }
-    #status.live {
-      background: var(--mint);
-      animation: pulse 1.4s ease-in-out infinite;
-    }
+    #status.live { background: var(--mint); animation: pulse 1.4s ease-in-out infinite; }
+    #status.error { background: #ffd0d0; }
 
     /* ===== セクション見出し ===== */
     section { max-width: 960px; margin: 0 auto; }
@@ -126,6 +133,7 @@
       display: inline-block;
       margin: 28px 0 14px;
       padding: 6px 18px;
+      font-family: var(--font-title), var(--font-main), sans-serif;
       font-size: 1.1rem;
       font-weight: 800;
       background: var(--yellow);
@@ -152,7 +160,6 @@
       text-align: center;
       padding: 0 12px 14px;
     }
-    /* うさ耳 */
     .card::before,
     .card::after {
       content: "";
@@ -188,6 +195,7 @@
       max-width: 100%;
       margin: 6px 0;
       padding: 0 4px;
+      font-family: var(--font-title), var(--font-main), sans-serif;
       font-size: clamp(1.5rem, 6vw, 2.2rem);
       font-weight: 800;
       font-variant-numeric: tabular-nums;
@@ -237,44 +245,109 @@
       background: var(--c);
       border: 2px solid var(--ink);
     }
-    #history .pname {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    #history .new-tag {
-      margin-left: 6px;
-      color: #ff4f8b;
-      font-size: .8em;
-    }
-    #history li.me {
-      background: var(--yellow);
-      box-shadow: 4px 4px 0 var(--pink);
-    }
+    #history .pname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #history .new-tag { margin-left: 6px; color: var(--hot); font-size: .8em; }
+    #history li.me { background: var(--yellow); box-shadow: 4px 4px 0 var(--pink); }
     #history li.me.flash { animation: wiggle .5s ease-in-out 4; }
+    .empty { grid-column: 1 / -1; text-align: center; font-weight: 800; opacity: .6; }
 
-    .empty {
-      grid-column: 1 / -1;
-      text-align: center;
-      font-weight: 800;
-      opacity: .6;
+    /* ===== 投票ボタン（画面下に固定） ===== */
+    .vote-bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 25;
+      display: flex;
+      justify-content: center;
+      padding:
+        24px
+        calc(12px + env(safe-area-inset-right))
+        calc(12px + env(safe-area-inset-bottom))
+        calc(12px + env(safe-area-inset-left));
+      background: linear-gradient(to bottom, transparent, rgba(255, 246, 233, .95) 40%);
+      pointer-events: none;
     }
+    .vote-btn {
+      pointer-events: auto;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: min(560px, 100%);
+      min-height: 68px;
+      padding: 10px 22px;
+      color: #fff;
+      text-decoration: none;
+      background: var(--hot);
+      border: 4px solid var(--ink);
+      border-radius: 999px;
+      box-shadow: 0 6px 0 var(--ink);
+      transition: transform .1s, box-shadow .1s;
+      animation: nudge 3.5s ease-in-out infinite;
+    }
+    .vote-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--ink); }
+    .vote-btn:focus-visible { outline: 4px solid var(--sky); outline-offset: 3px; }
+    /* キラッと光る演出 */
+    .vote-btn::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -60%;
+      width: 40%;
+      height: 100%;
+      background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .55), transparent);
+      transform: skewX(-20deg);
+      animation: shine 3.5s ease-in-out infinite;
+    }
+    .vote-btn.cheer { animation: cheer .6s ease-in-out 3; }
+    .vote-icon { font-size: 2rem; line-height: 1; flex-shrink: 0; }
+    .vote-text { flex: 1; text-align: left; min-width: 0; }
+    .vote-main {
+      display: block;
+      font-family: var(--font-title), var(--font-main), sans-serif;
+      font-size: clamp(1.05rem, 4.6vw, 1.4rem);
+      font-weight: 800;
+      line-height: 1.2;
+      -webkit-text-stroke: 1px var(--ink);
+      paint-order: stroke fill;
+    }
+    .vote-sub { display: block; font-size: .78rem; font-weight: 800; opacity: .95; }
+    .vote-arrow { font-size: 1.6rem; font-weight: 800; flex-shrink: 0; }
+    .vote-qr {
+      display: none;
+      width: 96px;
+      height: 96px;
+      padding: 4px;
+      background: #fff;
+      border: 3px solid var(--ink);
+      border-radius: 12px;
+      flex-shrink: 0;
+    }
+
+    /* ===== 大型モニタ用モード（URL に ?mode=display を付ける） ===== */
+    body.display .lang-switch { display: none; }
+    body.display .vote-btn { min-height: 120px; width: min(760px, 100%); animation: none; }
+    body.display .vote-btn.has-qr .vote-qr { display: block; }
+    body.display .vote-btn.has-qr .vote-arrow { display: none; }
 
     /* ===== NEW RECORD バナー ===== */
     #record {
       position: fixed;
       top: 40%;
       left: 50%;
-      z-index: 20;
+      z-index: 40;
       width: max-content;
       max-width: 90vw;
       padding: 14px 24px;
+      font-family: var(--font-title), var(--font-main), sans-serif;
       font-size: clamp(1.4rem, 7vw, 3rem);
       font-weight: 800;
       text-align: center;
       line-height: 1.2;
       color: #fff;
-      background: #ff4f8b;
+      background: var(--hot);
       border: 5px solid var(--ink);
       border-radius: 24px;
       box-shadow: 8px 8px 0 var(--ink);
@@ -284,11 +357,10 @@
     }
     #record.show { animation: record 2.8s ease-out; }
 
-    /* ===== 紙吹雪 ===== */
     .confetti {
       position: fixed;
       top: -20px;
-      z-index: 10;
+      z-index: 35;
       width: 12px;
       height: 16px;
       border-radius: 3px;
@@ -296,78 +368,62 @@
       animation: fall var(--t) linear forwards;
     }
 
-    /* ===== スマホ（狭い画面） ===== */
+    /* ===== スマホ ===== */
     @media (max-width: 520px) {
       body {
         padding-left: calc(10px + env(safe-area-inset-left));
         padding-right: calc(10px + env(safe-area-inset-right));
       }
       header { margin-top: 56px; }
-      .mascot { width: 44px; height: 44px; }
-      .mascot-fallback { font-size: 34px; }
-      #logo { max-height: 56px; }
+      .mascot-img { width: 44px; height: 44px; }
+      .emoji { font-size: 34px; }
+      .logo-img { max-height: 60px; }
       h1 { -webkit-text-stroke: 2px var(--ink); text-shadow: 3px 3px 0 var(--pink); }
       h2 { font-size: .95rem; margin: 22px 0 10px; }
-
       #latest {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 34px 12px;
         padding-top: 26px;
       }
-      .card {
-        border-width: 3px;
-        border-radius: 18px;
-        box-shadow: 4px 4px 0 var(--ink);
-        padding: 0 8px 10px;
-      }
-      .card::before,
-      .card::after {
-        top: -28px;
-        width: 20px;
-        height: 38px;
-        border-width: 3px;
-      }
-      .band {
-        margin: 0 -8px 8px;
-        border-bottom-width: 3px;
-        border-radius: 15px 15px 0 0;
-        font-size: .75rem;
-      }
+      .card { border-width: 3px; border-radius: 18px; box-shadow: 4px 4px 0 var(--ink); padding: 0 8px 10px; }
+      .card::before, .card::after { top: -28px; width: 20px; height: 38px; border-width: 3px; }
+      .band { margin: 0 -8px 8px; border-bottom-width: 3px; border-radius: 15px 15px 0 0; font-size: .75rem; }
       .card .name { font-size: .95rem; }
       .card .rank { font-size: .7rem; padding: 2px 8px; }
-
-      #history li {
-        grid-template-columns: 2.2em 10px minmax(0, 1fr) auto;
-        gap: 8px;
-        padding: 7px 12px;
-        font-size: .9rem;
-      }
+      #history li { grid-template-columns: 2.2em 10px minmax(0, 1fr) auto; gap: 8px; padding: 7px 12px; font-size: .9rem; }
       #history .dot { width: 10px; height: 10px; }
+      .vote-btn { min-height: 62px; padding: 8px 16px; gap: 10px; }
+      .vote-icon { font-size: 1.6rem; }
     }
 
-    /* ===== 大型モニタ（広い画面） ===== */
+    /* ===== 大きい画面 ===== */
     @media (min-width: 1400px) {
       html { font-size: 20px; }
       section { max-width: 1280px; }
     }
 
-    /* ===== キーフレーム ===== */
-    @keyframes hop {
-      0%, 100% { transform: translateY(0); }
-      50%      { transform: translateY(-10px); }
-    }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50%      { transform: scale(1.08); }
-    }
+    @keyframes hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
     @keyframes boing {
       from { opacity: 0; transform: translateY(60px) scale(.6) rotate(-6deg); }
       to   { opacity: 1; transform: none; }
     }
     @keyframes wiggle {
       0%, 100% { transform: rotate(0); }
-      25%      { transform: rotate(-1.5deg) scale(1.02); }
-      75%      { transform: rotate(1.5deg) scale(1.02); }
+      25% { transform: rotate(-1.5deg) scale(1.02); }
+      75% { transform: rotate(1.5deg) scale(1.02); }
+    }
+    @keyframes nudge {
+      0%, 86%, 100% { transform: translateY(0); }
+      90% { transform: translateY(-6px); }
+      94% { transform: translateY(0); }
+      97% { transform: translateY(-3px); }
+    }
+    @keyframes shine { 0%, 60% { left: -60%; } 100% { left: 130%; } }
+    @keyframes cheer {
+      0%, 100% { transform: scale(1) rotate(0); }
+      30% { transform: scale(1.06) rotate(-2deg); }
+      60% { transform: scale(1.06) rotate(2deg); }
     }
     @keyframes record {
       0%   { opacity: 0; transform: translate(-50%, -50%) scale(.2) rotate(-10deg); }
@@ -376,28 +432,26 @@
       85%  { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-2deg); }
       100% { opacity: 0; transform: translate(-50%, -50%) scale(1.3); }
     }
-    @keyframes fall {
-      to { transform: translate(var(--x), 110vh) rotate(var(--r)); }
-    }
+    @keyframes fall { to { transform: translate(var(--x), 110vh) rotate(var(--r)); } }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation: none !important; }
     }
   </style>
 </head>
 <body>
+  <div class="bg-layer" id="bg"></div>
+
   <div class="lang-switch">
     <select id="lang" aria-label="Language"></select>
   </div>
 
   <header>
     <div class="logo-wrap">
-      <img class="mascot" src="images/rabbit.png" alt=""
-           onerror="this.outerHTML='<span class=&quot;mascot-fallback&quot;>🐰</span>'">
-      <img id="logo" src="images/logo.png" alt="RABBIT SHOOTING"
-           onerror="this.outerHTML='<h1>RABBIT SHOOTING</h1>'">
-      <span class="mascot-fallback" aria-hidden="true">🥕</span>
+      <span id="slot-mascot"></span>
+      <span id="slot-logo"></span>
+      <span class="emoji" aria-hidden="true">🥕</span>
     </div>
-    <div><span id="status" data-i18n="connecting"></span></div>
+    <div><span id="status"></span></div>
   </header>
 
   <section>
@@ -410,163 +464,227 @@
     <ol id="history"></ol>
   </section>
 
+  <div class="vote-bar">
+    <a class="vote-btn" id="vote" target="_blank" rel="noopener">
+      <img class="vote-qr" id="vote-qr" alt="">
+      <span class="vote-icon" aria-hidden="true">🗳️</span>
+      <span class="vote-text">
+        <span class="vote-main" data-i18n="vote"></span>
+        <span class="vote-sub" data-i18n="voteSub"></span>
+      </span>
+      <span class="vote-arrow" aria-hidden="true">›</span>
+    </a>
+  </div>
+
   <div id="record"></div>
 
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-    const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";
-    const SUPABASE_ANON_KEY = "YOUR_ANON_KEY";
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // ============================================================
+    // ★ 設定はここだけ書き換えればOK ★
+    // ============================================================
+    const CONFIG = {
+      supabaseUrl: "https://kfqpcioiccwrpgojagob.supabase.co",
+      supabaseKey: "sb_publishable_EFDYHaG9YypaPhwdNAswJg_CJYImIq-",
 
-    // ============================================================
-    // 翻訳データ（{n} は数値に置き換えられる）
-    // ============================================================
-    const I18N = {
-      ja: {
-        label: "日本語",
-        connecting: "せつぞく中…",
-        live: "● LIVE中！",
-        latest: "さいしんのゲーム",
-        ranking: "れきだいランキング",
-        noData: "まだデータがないよ！",
-        noRecord: "まだ記録がないよ！",
-        player: "PLAYER {n}",
-        rank: "歴代 {n} 位",
-        outOfRank: "ランク外",
-        newTag: "NEW!",
-        newRecord: "🎉 しんきろく！ 🎉"
+      // 投票ページ
+      voteUrl: "https://www.komabasai.net/77/project/166/?utm_source=project_card&utm_medium=print&utm_campaign=kf77toujitsu",
+
+      // 画像（index.html から見た場所。使わないものは "" にする）
+      images: {
+        logo: "images/logo.png",         // タイトルロゴ（無ければ文字で表示）
+        mascot: "images/rabbit.png",     // うさぎ（無ければ 🐰）
+        background: "",                  // 背景画像（例: "images/bg.jpg"）
+        backgroundOpacity: 0.35,         // 背景画像の濃さ 0〜1
+        voteQr: "images/vote-qr.png"     // 大型モニタ用の投票QR（?mode=display のときだけ表示）
       },
-      en: {
-        label: "English",
-        connecting: "Connecting…",
-        live: "● LIVE!",
-        latest: "LATEST GAME",
-        ranking: "ALL-TIME RANKING",
-        noData: "No data yet!",
-        noRecord: "No records yet!",
-        player: "PLAYER {n}",
-        rank: "Rank #{n}",
-        outOfRank: "Unranked",
-        newTag: "NEW!",
-        newRecord: "🎉 NEW RECORD! 🎉"
+
+      // 画像やフォントを差し替えても古いまま表示されるときは、この数字を1増やす
+      assetVersion: 1,
+
+      // タイトル・見出し・スコア数字のフォント（全言語共通）
+      //   Google Fonts: { family: "名前", url: "読み込みURL" }
+      //   自分のファイル: { family: "好きな名前", file: "fonts/ファイル名.woff2" }
+      titleFont: {
+        family: "Mochiy Pop One",
+        url: "https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&display=swap"
       },
-      "zh-Hans": {
-        label: "简体中文",
-        connecting: "连接中…",
-        live: "● 直播中！",
-        latest: "最新对局",
-        ranking: "历代排行榜",
-        noData: "还没有数据！",
-        noRecord: "还没有记录！",
-        player: "玩家 {n}",
-        rank: "历代第 {n} 名",
-        outOfRank: "未上榜",
-        newTag: "新!",
-        newRecord: "🎉 新纪录！ 🎉"
-      },
-      "zh-Hant": {
-        label: "繁體中文",
-        connecting: "連線中…",
-        live: "● 直播中！",
-        latest: "最新對局",
-        ranking: "歷代排行榜",
-        noData: "還沒有資料！",
-        noRecord: "還沒有紀錄！",
-        player: "玩家 {n}",
-        rank: "歷代第 {n} 名",
-        outOfRank: "未上榜",
-        newTag: "新!",
-        newRecord: "🎉 新紀錄！ 🎉"
-      },
-      ko: {
-        label: "한국어",
-        connecting: "연결 중…",
-        live: "● 라이브!",
-        latest: "최신 게임",
-        ranking: "역대 랭킹",
-        noData: "아직 데이터가 없어요!",
-        noRecord: "아직 기록이 없어요!",
-        player: "플레이어 {n}",
-        rank: "역대 {n}위",
-        outOfRank: "순위 밖",
-        newTag: "NEW!",
-        newRecord: "🎉 신기록! 🎉"
-      },
-      es: {
-        label: "Español",
-        connecting: "Conectando…",
-        live: "● ¡EN VIVO!",
-        latest: "ÚLTIMA PARTIDA",
-        ranking: "RANKING HISTÓRICO",
-        noData: "¡Aún no hay datos!",
-        noRecord: "¡Aún no hay récords!",
-        player: "JUGADOR {n}",
-        rank: "Puesto #{n}",
-        outOfRank: "Sin puesto",
-        newTag: "¡NUEVO!",
-        newRecord: "🎉 ¡NUEVO RÉCORD! 🎉"
-      },
-      fr: {
-        label: "Français",
-        connecting: "Connexion…",
-        live: "● EN DIRECT !",
-        latest: "DERNIÈRE PARTIE",
-        ranking: "CLASSEMENT GÉNÉRAL",
-        noData: "Pas encore de données !",
-        noRecord: "Pas encore de records !",
-        player: "JOUEUR {n}",
-        rank: "Rang n°{n}",
-        outOfRank: "Non classé",
-        newTag: "NOUVEAU !",
-        newRecord: "🎉 NOUVEAU RECORD ! 🎉"
+
+      // 本文のフォント（言語ごと）
+      fonts: {
+        ja: { family: "M PLUS Rounded 1c" },
+        en: { family: "Fredoka", url: "https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" },
+        es: { family: "Fredoka", url: "https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" },
+        fr: { family: "Fredoka", url: "https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" },
+        ko: { family: "Jua", url: "https://fonts.googleapis.com/css2?family=Jua&display=swap" },
+        "zh-Hans": { family: "Noto Sans SC", url: "https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500;800&display=swap" },
+        "zh-Hant": { family: "Noto Sans TC", url: "https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;800&display=swap" }
       }
     };
 
     // ============================================================
-    // 言語ごとのフォント（Google Fonts）
-    //   family: CSS で使う名前 / url: 読み込む CSS（null なら追加読み込みなし）
+    // 翻訳データ
     // ============================================================
-    const FONTS = {
-      ja: { family: "M PLUS Rounded 1c", url: null },
-      en: { family: "Fredoka", url: "https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" },
-      es: { family: "Fredoka", url: "https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" },
-      fr: { family: "Fredoka", url: "https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" },
-      ko: { family: "Jua", url: "https://fonts.googleapis.com/css2?family=Jua&display=swap" },
-      "zh-Hans": { family: "Noto Sans SC", url: "https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500;800&display=swap" },
-      "zh-Hant": { family: "Noto Sans TC", url: "https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;800&display=swap" }
+    const I18N = {
+      ja: {
+        label: "日本語", connecting: "せつぞく中…", live: "● LIVE中！",
+        latest: "さいしんのゲーム", ranking: "れきだいランキング",
+        noData: "まだデータがないよ！", noRecord: "まだ記録がないよ！",
+        player: "PLAYER {n}", rank: "歴代 {n} 位", outOfRank: "ランク外",
+        newTag: "NEW!", newRecord: "🎉 しんきろく！ 🎉",
+        vote: "この企画に投票する！", voteSub: "駒場祭の企画ページへ",
+        scanToVote: "スマホで読み取って投票しよう！"
+      },
+      en: {
+        label: "English", connecting: "Connecting…", live: "● LIVE!",
+        latest: "LATEST GAME", ranking: "ALL-TIME RANKING",
+        noData: "No data yet!", noRecord: "No records yet!",
+        player: "PLAYER {n}", rank: "Rank #{n}", outOfRank: "Unranked",
+        newTag: "NEW!", newRecord: "🎉 NEW RECORD! 🎉",
+        vote: "Vote for this project!", voteSub: "Go to the Komaba Festival page",
+        scanToVote: "Scan with your phone to vote!"
+      },
+      "zh-Hans": {
+        label: "简体中文", connecting: "连接中…", live: "● 直播中！",
+        latest: "最新对局", ranking: "历代排行榜",
+        noData: "还没有数据！", noRecord: "还没有记录！",
+        player: "玩家 {n}", rank: "历代第 {n} 名", outOfRank: "未上榜",
+        newTag: "新!", newRecord: "🎉 新纪录！ 🎉",
+        vote: "为本企划投票！", voteSub: "前往驹场祭企划页面",
+        scanToVote: "用手机扫码投票！"
+      },
+      "zh-Hant": {
+        label: "繁體中文", connecting: "連線中…", live: "● 直播中！",
+        latest: "最新對局", ranking: "歷代排行榜",
+        noData: "還沒有資料！", noRecord: "還沒有紀錄！",
+        player: "玩家 {n}", rank: "歷代第 {n} 名", outOfRank: "未上榜",
+        newTag: "新!", newRecord: "🎉 新紀錄！ 🎉",
+        vote: "為本企劃投票！", voteSub: "前往駒場祭企劃頁面",
+        scanToVote: "用手機掃描投票！"
+      },
+      ko: {
+        label: "한국어", connecting: "연결 중…", live: "● 라이브!",
+        latest: "최신 게임", ranking: "역대 랭킹",
+        noData: "아직 데이터가 없어요!", noRecord: "아직 기록이 없어요!",
+        player: "플레이어 {n}", rank: "역대 {n}위", outOfRank: "순위 밖",
+        newTag: "NEW!", newRecord: "🎉 신기록! 🎉",
+        vote: "이 기획에 투표하기!", voteSub: "고마바 축제 기획 페이지로",
+        scanToVote: "휴대폰으로 스캔해서 투표하세요!"
+      },
+      es: {
+        label: "Español", connecting: "Conectando…", live: "● ¡EN VIVO!",
+        latest: "ÚLTIMA PARTIDA", ranking: "RANKING HISTÓRICO",
+        noData: "¡Aún no hay datos!", noRecord: "¡Aún no hay récords!",
+        player: "JUGADOR {n}", rank: "Puesto #{n}", outOfRank: "Sin puesto",
+        newTag: "¡NUEVO!", newRecord: "🎉 ¡NUEVO RÉCORD! 🎉",
+        vote: "¡Vota por este proyecto!", voteSub: "Ir a la página del Festival de Komaba",
+        scanToVote: "¡Escanea con tu móvil para votar!"
+      },
+      fr: {
+        label: "Français", connecting: "Connexion…", live: "● EN DIRECT !",
+        latest: "DERNIÈRE PARTIE", ranking: "CLASSEMENT GÉNÉRAL",
+        noData: "Pas encore de données !", noRecord: "Pas encore de records !",
+        player: "JOUEUR {n}", rank: "Rang n°{n}", outOfRank: "Non classé",
+        newTag: "NOUVEAU !", newRecord: "🎉 NOUVEAU RECORD ! 🎉",
+        vote: "Votez pour ce projet !", voteSub: "Page du festival de Komaba",
+        scanToVote: "Scannez avec votre téléphone pour voter !"
+      }
     };
-    const loadedFontUrls = new Set();
 
-    function applyFont(lang) {
-      const font = FONTS[lang] ?? FONTS.ja;
-      if (font.url && !loadedFontUrls.has(font.url)) {
+    const supabase = createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
+    const params = new URLSearchParams(location.search);
+    const isDisplayMode = params.get("mode") === "display";
+    const withVersion = (src) => `${src}${src.includes("?") ? "&" : "?"}v=${CONFIG.assetVersion}`;
+
+    // ============================================================
+    // フォント読み込み
+    // ============================================================
+    const loadedFonts = new Set();
+
+    function loadFont(font) {
+      if (!font) return;
+      const id = font.url ?? font.file;
+      if (!id || loadedFonts.has(id)) return;
+      loadedFonts.add(id);
+
+      if (font.url) {
         const link = document.createElement("link");
         link.rel = "stylesheet";
         link.href = font.url;
         document.head.appendChild(link);
-        loadedFontUrls.add(font.url);
+      } else if (font.file) {
+        const style = document.createElement("style");
+        style.textContent = `
+          @font-face {
+            font-family: "${font.family}";
+            src: url("${withVersion(font.file)}");
+            font-weight: 100 900;
+            font-display: swap;
+          }`;
+        document.head.appendChild(style);
       }
-      document.documentElement.style.setProperty("--font-main", `"${font.family}"`);
+    }
+
+    function applyFonts(lang) {
+      const body = CONFIG.fonts[lang] ?? CONFIG.fonts.ja;
+      loadFont(body);
+      loadFont(CONFIG.titleFont);
+      const root = document.documentElement.style;
+      root.setProperty("--font-main", `"${body.family}"`);
+      root.setProperty("--font-title", `"${CONFIG.titleFont?.family ?? body.family}"`);
     }
 
     // ============================================================
-    // 言語の決定：URL の ?lang= → 保存済みの設定 → 端末の言語 → 日本語
+    // 画像の読み込み（無いときは代わりの表示を出し、Console に警告する）
+    // ============================================================
+    function mountImage(slot, src, className, alt, fallbackHtml) {
+      slot.innerHTML = fallbackHtml;
+      if (!src) return;
+      const img = new Image();
+      img.className = className;
+      img.alt = alt;
+      img.onload = () => slot.replaceChildren(img);
+      img.onerror = () => console.warn(`[画像] 見つかりません: ${src}（場所・ファイル名・大文字小文字を確認）`);
+      img.src = withVersion(src);
+    }
+
+    function setupImages() {
+      const im = CONFIG.images;
+      mountImage(document.getElementById("slot-mascot"), im.mascot, "mascot-img", "",
+        `<span class="emoji" aria-hidden="true">🐰</span>`);
+      mountImage(document.getElementById("slot-logo"), im.logo, "logo-img", "RABBIT SHOOTING",
+        `<h1>RABBIT SHOOTING</h1>`);
+
+      if (im.background) {
+        const bg = document.getElementById("bg");
+        bg.style.backgroundImage = `url("${withVersion(im.background)}")`;
+        bg.style.opacity = String(im.backgroundOpacity ?? 0.35);
+      }
+
+      if (isDisplayMode && im.voteQr) {
+        const qr = document.getElementById("vote-qr");
+        qr.onload = () => $vote.classList.add("has-qr");
+        qr.onerror = () => console.warn(`[画像] 投票QRが見つかりません: ${im.voteQr}`);
+        qr.src = withVersion(im.voteQr);
+      }
+    }
+
+    // ============================================================
+    // 言語
     // ============================================================
     const LANG_KEY = "rabbit-lang";
 
     function normalizeLang(code) {
       if (!code) return null;
       const c = code.toLowerCase();
-      if (c.startsWith("zh")) {
-        return /(hant|tw|hk|mo)/.test(c) ? "zh-Hant" : "zh-Hans";
-      }
+      if (c.startsWith("zh")) return /(hant|tw|hk|mo)/.test(c) ? "zh-Hant" : "zh-Hans";
       const base = c.split("-")[0];
       return I18N[base] ? base : null;
     }
 
     function detectLang() {
-      const fromUrl = normalizeLang(new URLSearchParams(location.search).get("lang"));
+      const fromUrl = normalizeLang(params.get("lang"));
       if (fromUrl) return fromUrl;
       const saved = normalizeLang(localStorage.getItem(LANG_KEY));
       if (saved) return saved;
@@ -588,9 +706,11 @@
     const $status = document.getElementById("status");
     const $record = document.getElementById("record");
     const $lang = document.getElementById("lang");
+    const $vote = document.getElementById("vote");
     let lastId = null;
     let lastSnapshot = null;
     let isLive = false;
+    let lastError = null;
 
     const POP_COLORS = ["#ff8fb8", "#ffe066", "#7ee0c3", "#8ecbff", "#c9a7ff", "#ffb36b"];
     const MEDALS = { 1: "🥇", 2: "🥈", 3: "🥉" };
@@ -602,34 +722,40 @@
     const num = (v) => Number(v) || 0;
     const fmt = (v) => num(v).toLocaleString(currentLang);
 
-    // 言語メニューを作る
+    $vote.href = CONFIG.voteUrl;
+
     for (const [code, dict] of Object.entries(I18N)) {
       const opt = document.createElement("option");
       opt.value = code;
       opt.textContent = dict.label;
       $lang.appendChild(opt);
     }
+    $lang.addEventListener("change", (e) => setLang(e.target.value));
 
     function setLang(lang) {
       currentLang = I18N[lang] ? lang : "ja";
       localStorage.setItem(LANG_KEY, currentLang);
       document.documentElement.lang = currentLang;
       $lang.value = currentLang;
-      applyFont(currentLang);
+      applyFonts(currentLang);
 
       document.querySelectorAll("[data-i18n]").forEach((el) => {
         el.textContent = t(el.dataset.i18n);
       });
+      if (isDisplayMode) {
+        document.querySelector(".vote-sub").textContent = t("scanToVote");
+      }
       $record.textContent = t("newRecord");
       updateStatus();
-      render(lastSnapshot, false); // 言語を変えたときは演出なしで描き直す
+      render(lastSnapshot, false);
     }
 
-    $lang.addEventListener("change", (e) => setLang(e.target.value));
-
     function updateStatus() {
-      $status.textContent = isLive ? t("live") : t("connecting");
-      $status.classList.toggle("live", isLive);
+      $status.classList.toggle("live", isLive && !lastError);
+      $status.classList.toggle("error", !!lastError);
+      $status.textContent = lastError
+        ? `⚠ ${lastError}`
+        : (isLive ? t("live") : t("connecting"));
     }
 
     // ============================================================
@@ -639,15 +765,13 @@
       const start = performance.now();
       const step = (now) => {
         const p = Math.min(1, (now - start) / duration);
-        const eased = 1 - Math.pow(1 - p, 3);
-        el.textContent = Math.round(target * eased).toLocaleString(currentLang);
+        el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))).toLocaleString(currentLang);
         if (p < 1) requestAnimationFrame(step);
       };
       requestAnimationFrame(step);
     }
 
     function confetti() {
-      // スマホでは紙吹雪を少なめにして負荷を下げる
       const count = window.innerWidth < 520 ? 35 : 60;
       for (let i = 0; i < count; i++) {
         const piece = document.createElement("span");
@@ -663,10 +787,10 @@
       }
     }
 
-    function showRecord() {
-      $record.classList.remove("show");
-      void $record.offsetWidth; // アニメーションをリセットする
-      $record.classList.add("show");
+    function replayClass(el, cls) {
+      el.classList.remove(cls);
+      void el.offsetWidth;
+      el.classList.add(cls);
     }
 
     function rankChip(rank) {
@@ -711,8 +835,10 @@
         });
         confetti();
         if (latest.some((p) => num(p.rank) === 1)) {
-          setTimeout(showRecord, 600);
+          setTimeout(() => replayClass($record, "show"), 600);
         }
+        // 盛り上がったタイミングで投票ボタンを揺らす
+        setTimeout(() => replayClass($vote, "cheer"), 3200);
       }
     }
 
@@ -729,8 +855,13 @@
 
       if (error) {
         console.error(error);
+        lastError = `${error.code ?? ""} ${error.message ?? "error"}`.trim();
+        updateStatus();
         return;
       }
+      lastError = null;
+      updateStatus();
+
       if (data && data.id !== lastId) {
         const isUpdate = lastId !== null;
         lastId = data.id;
@@ -749,13 +880,18 @@
       .subscribe((status) => {
         isLive = status === "SUBSCRIBED";
         updateStatus();
-        if (isLive) fetchLatest(); // 再接続時に、切断中の更新を取り直す
+        if (isLive) fetchLatest();
       });
 
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) fetchLatest();
     });
 
+    // 万一リアルタイム通知が止まっても、30秒ごとに最新を確認する
+    setInterval(fetchLatest, 30000);
+
+    if (isDisplayMode) document.body.classList.add("display");
+    setupImages();
     setLang(currentLang);
     fetchLatest();
   </script>
